@@ -19,6 +19,7 @@ package stackdriverexporter
 import (
 	"context"
 	"fmt"
+	"google.golang.org/grpc"
 	"strings"
 	"time"
 
@@ -32,7 +33,6 @@ import (
 	"go.opentelemetry.io/collector/translator/internaldata"
 	traceexport "go.opentelemetry.io/otel/sdk/export/trace"
 	"google.golang.org/api/option"
-	"google.golang.org/grpc"
 )
 
 const name = "stackdriver"
@@ -95,6 +95,11 @@ func generateClientOptions(cfg *Config) ([]option.ClientOption, error) {
 	if cfg.GetClientOptions != nil {
 		copts = append(copts, cfg.GetClientOptions()...)
 	}
+
+	if cfg.CredentialFileName != "" {
+		copts = append(copts, option.WithCredentialsFile(cfg.CredentialFileName))
+	}
+
 	return copts, nil
 }
 

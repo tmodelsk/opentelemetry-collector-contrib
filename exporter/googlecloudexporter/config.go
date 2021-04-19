@@ -41,6 +41,9 @@ type Config struct {
 	// Optional.
 	GetClientOptions func() []option.ClientOption
 
+	// ClientOption for authentication via API key
+	CredentialFileName string `mapstructure:"credential_file_name"`
+
 	MetricConfig MetricConfig `mapstructure:"metric"`
 }
 

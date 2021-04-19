@@ -8,6 +8,7 @@ The following configuration options are supported:
 - `endpoint` (optional): Endpoint where data is going to be sent to.
 - `user_agent` (optional): Override the user agent string sent on requests to Cloud Monitoring (currently only applies to metrics). Specify `{{version}}` to include the application version number. Defaults to `opentelemetry-collector-contrib {{version}}`.
 - `use_insecure` (optional): If true. use gRPC as their communication transport. Only has effect if Endpoint is not "".
+- `credential_file_name` (optional): Path to service account token.  
 - `timeout` (optional): Timeout for all API calls. If not set, defaults to 12 seconds.
 - `number_of_workers` (optional): NumberOfWorkers sets the number of go rountines that send requests. The minimum number of workers is 1.
 - `resource_mappings` (optional): ResourceMapping defines mapping of resources from source (OpenCensus) to target (Google Cloud).
@@ -41,6 +42,7 @@ exporters:
     endpoint: test-endpoint
     user_agent: my-collector {{version}}
     use_insecure: true
+    credential_file_name: service-account-token.json
     timeout: 12s
     number_of_workers: 3
 

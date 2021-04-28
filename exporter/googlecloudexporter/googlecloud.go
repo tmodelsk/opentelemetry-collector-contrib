@@ -184,6 +184,10 @@ func newGoogleCloudMetricsExporter(cfg *Config, params component.ExporterCreateP
 
 // pushMetrics calls StackdriverExporter.PushMetricsProto on each element of the given metrics
 func (me *metricsExporter) pushMetrics(ctx context.Context, m pdata.Metrics) error {
+	// Some metrics from Hostmetric receiver has Datapoints with empty StartTimestamp = 0
+	// This causes that later on StartTimestamp is assigned as Timestamp and such datapoints are rejected by google monitoring api
+	fixEmptyStartTime(m)
+
 	// PushMetricsProto doesn't bundle subsequent calls, so we need to
 	// combine the data here to avoid generating too many RPC calls.
 	mds := exportAdditionalLabels(internaldata.MetricsToOC(m))

@@ -174,6 +174,7 @@ func newGoogleCloudMetricsExporter(cfg *Config, params component.ExporterCreateP
 		cfg,
 		params.Logger,
 		mExp.pushMetrics,
+		exporterhelper.WithResourceToTelemetryConversion(cfg.ResourceToTelemetrySettings),
 		exporterhelper.WithShutdown(mExp.Shutdown),
 		// Disable exporterhelper Timeout, since we are using a custom mechanism
 		// within exporter itself

@@ -44,6 +44,11 @@ type Config struct {
 	// ClientOption for authentication via API key
 	CredentialFileName string `mapstructure:"credential_file_name"`
 
+	// ResourceToTelemetrySettings is the option for converting resource attrihutes to telemetry attributes.
+	// "Enabled" - A boolean field to enable/disable this option. Default is `false`.
+	// If enabled, all the resource attributes will be converted to metric labels by default.
+	exporterhelper.ResourceToTelemetrySettings `mapstructure:"resource_to_telemetry_conversion"`
+
 	MetricConfig MetricConfig `mapstructure:"metric"`
 }
 

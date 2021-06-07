@@ -49,6 +49,9 @@ type Config struct {
 	// If enabled, all the resource attributes will be converted to metric labels by default.
 	exporterhelper.ResourceToTelemetrySettings `mapstructure:"resource_to_telemetry_conversion"`
 
+	// Max number of metric's labels. Metrics exceeding this would be dropped. Default 0 = no limit
+	LabelsLimit int `mapstructure:"labels_limit"`
+
 	MetricConfig MetricConfig `mapstructure:"metric"`
 }
 

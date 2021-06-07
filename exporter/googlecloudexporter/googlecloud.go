@@ -18,10 +18,8 @@ package googlecloudexporter
 
 import (
 	"context"
-	"fmt"
-	"strings"
-
 	"contrib.go.opencensus.io/exporter/stackdriver"
+	"fmt"
 	cloudtrace "github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/trace"
 	metricspb "github.com/census-instrumentation/opencensus-proto/gen-go/metrics/v1"
 	"go.opentelemetry.io/collector/component"
@@ -31,8 +29,11 @@ import (
 	"go.opentelemetry.io/collector/translator/conventions"
 	"go.opentelemetry.io/collector/translator/internaldata"
 	traceexport "go.opentelemetry.io/otel/sdk/export/trace"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc"
+	"strings"
 )
 
 // traceExporter is a wrapper struct of OT cloud trace exporter
@@ -42,7 +43,9 @@ type traceExporter struct {
 
 // metricsExporter is a wrapper struct of OC stackdriver exporter
 type metricsExporter struct {
-	mexporter *stackdriver.Exporter
+	mexporter          *stackdriver.Exporter
+	labelsLimit        int
+	loggerNoStacktrace *zap.Logger
 }
 
 func (te *traceExporter) Shutdown(ctx context.Context) error {
@@ -168,7 +171,8 @@ func newGoogleCloudMetricsExporter(cfg *Config, params component.ExporterCreateP
 	if serr != nil {
 		return nil, fmt.Errorf("cannot configure Google Cloud metric exporter: %w", serr)
 	}
-	mExp := &metricsExporter{mexporter: sde}
+	mExp := &metricsExporter{mexporter: sde, labelsLimit: cfg.LabelsLimit,
+		loggerNoStacktrace: params.Logger.WithOptions(zap.AddStacktrace(zapcore.PanicLevel))}
 
 	return exporterhelper.NewMetricsExporter(
 		cfg,
@@ -193,17 +197,41 @@ func (me *metricsExporter) pushMetrics(ctx context.Context, m pdata.Metrics) err
 	// combine the data here to avoid generating too many RPC calls.
 	mds := exportAdditionalLabels(internaldata.MetricsToOC(m))
 	count := 0
+
 	for _, md := range mds {
-		count += len(md.Metrics)
+		if me.labelsLimit > 0 {	// drop metrics with labels count greater then labelsLimit
+			for _, metric := range md.Metrics {
+				if len(metric.GetMetricDescriptor().GetLabelKeys()) <= me.labelsLimit {
+					count++
+				} else {
+					me.loggerNoStacktrace.Warn("Dropping metric: too many labels",
+						zap.String("metric", metric.GetMetricDescriptor().GetName()),
+						zap.Int("labels", len(metric.GetMetricDescriptor().GetLabelKeys())),
+						zap.Int("limit", me.labelsLimit))
+				}
+			}
+		} else {
+			count += len(md.Metrics)
+		}
 	}
+	if count == 0 {
+		me.loggerNoStacktrace.Warn("Dropping sending whole batch: no metrics, because all dropped, reason: too many labels",
+			zap.Int("limit", me.labelsLimit))
+		return nil
+	}
+
 	metrics := make([]*metricspb.Metric, 0, count)
 	for _, md := range mds {
-		if md.Resource == nil {
+		if md.Resource == nil && me.labelsLimit == 0 {
 			metrics = append(metrics, md.Metrics...)
 			continue
 		}
 		for _, metric := range md.Metrics {
-			if metric.Resource == nil {
+			if me.labelsLimit > 0 && len(metric.GetMetricDescriptor().GetLabelKeys()) > me.labelsLimit {
+				// drop metrics with labels count greater then labelsLimit
+				continue
+			}
+			if metric.Resource == nil && md.Resource != nil {
 				metric.Resource = md.Resource
 			}
 			metrics = append(metrics, metric)

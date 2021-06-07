@@ -56,6 +56,7 @@ func createDefaultConfig() config.Exporter {
 		RetrySettings:    exporterhelper.DefaultRetrySettings(),
 		QueueSettings:    exporterhelper.DefaultQueueSettings(),
 		UserAgent:        "opentelemetry-collector-contrib {{version}}",
+		LabelsLimit: 0,
 	}
 }
 
